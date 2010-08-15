@@ -1,5 +1,4 @@
-installmii_core.o: \
- /home/lukegb/patchmii-core-read-only/./installmii_core.c \
+installmii_core.o: /home/lukegb/installmii-core/./installmii_core.c \
  /opt/devkitpro/libogc/include/ogcsys.h \
  /opt/devkitpro/libogc/include/gccore.h \
  /opt/devkitpro/libogc/include/ogc/dsp.h \
@@ -56,10 +55,10 @@ installmii_core.o: \
  /opt/devkitpro/libogc/include/wiiuse/wiiuse.h \
  /opt/devkitpro/libogc/include/bte/bte.h \
  /opt/devkitpro/libogc/include/bte/bd_addr.h \
- /home/lukegb/patchmii-core-read-only/./installmii_core.h \
+ /home/lukegb/installmii-core/./installmii_core.h \
  /opt/devkitpro/libogc/include/debug.h \
- /home/lukegb/patchmii-core-read-only/./http.h \
- /home/lukegb/patchmii-core-read-only/build/haxx_certs.h
+ /home/lukegb/installmii-core/./http.h \
+ /home/lukegb/installmii-core/build/haxx_certs.h
 
 /opt/devkitpro/libogc/include/ogcsys.h:
 
@@ -173,10 +172,10 @@ installmii_core.o: \
 
 /opt/devkitpro/libogc/include/bte/bd_addr.h:
 
-/home/lukegb/patchmii-core-read-only/./installmii_core.h:
+/home/lukegb/installmii-core/./installmii_core.h:
 
 /opt/devkitpro/libogc/include/debug.h:
 
-/home/lukegb/patchmii-core-read-only/./http.h:
+/home/lukegb/installmii-core/./http.h:
 
-/home/lukegb/patchmii-core-read-only/build/haxx_certs.h:
+/home/lukegb/installmii-core/build/haxx_certs.h:

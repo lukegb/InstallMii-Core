@@ -1,4 +1,4 @@
-http.o: /home/lukegb/patchmii-core-read-only/./http.c \
+http.o: /home/lukegb/installmii-core/./http.c \
  /opt/devkitpro/libogc/include/ogcsys.h \
  /opt/devkitpro/libogc/include/gccore.h \
  /opt/devkitpro/libogc/include/ogc/dsp.h \
@@ -53,7 +53,7 @@ http.o: /home/lukegb/patchmii-core-read-only/./http.c \
  /opt/devkitpro/libogc/include/network.h \
  /opt/devkitpro/libogc/include/ogc/lwp_watchdog.h \
  /opt/devkitpro/libogc/include/ogc/lwp_queue.h \
- /home/lukegb/patchmii-core-read-only/./http.h
+ /home/lukegb/installmii-core/./http.h
 
 /opt/devkitpro/libogc/include/ogcsys.h:
 
@@ -163,4 +163,4 @@ http.o: /home/lukegb/patchmii-core-read-only/./http.c \
 
 /opt/devkitpro/libogc/include/ogc/lwp_queue.h:
 
-/home/lukegb/patchmii-core-read-only/./http.h:
+/home/lukegb/installmii-core/./http.h:

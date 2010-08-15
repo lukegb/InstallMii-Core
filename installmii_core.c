@@ -31,7 +31,7 @@
 #include <network.h>
 #include <sys/errno.h>
 
-#include <wiiuse/wpad.h> // DEBUG ONLY REMOVE ME
+#include <wiiuse/wpad.h>
 
 #include "installmii_core.h"
 #include "debug.h"
@@ -40,9 +40,11 @@
 
 #define VERSION "0.1"
 
-// These parameters will download IOS37, modify it, and install it as IOS5
-#define INPUT_TITLEID_H 1
-#define INPUT_TITLEID_L 37
+#ifdef STANDALONE
+  // These parameters will download IOS37, modify it, and install it as IOS5
+  #define INPUT_TITLEID_H 1
+  #define INPUT_TITLEID_L 37
+#endif
 
 #define ALIGN(a,b) ((((a)+(b)-1)/(b))*(b))
 
@@ -102,7 +104,7 @@ void printvers(void) {
 
 void console_setup(void) {
   VIDEO_Init();
-  PAD_Init();
+  WPAD_Init();
   
   rmode = VIDEO_GetPreferredMode(NULL);
 
@@ -117,13 +119,19 @@ void console_setup(void) {
   CON_InitEx(rmode,20,30,rmode->fbWidth - 40,rmode->xfbHeight - 60);
 }
 
-int get_nus_object(u32 titleid1, u32 titleid2, char *content, u8 **outbuf, u32 *outlen) {
+int get_nus_object(u32 titleid1, u32 titleid2, u32 version, char *content, u8 **outbuf, u32 *outlen) {
   static char buf[128];
   int retval;
   u32 http_status;
 
-  snprintf(buf, 128, "http://nus.cdn.shop.wii.com/ccs/download/%08x%08x/%s",
-	   titleid1, titleid2, content);
+  if (version != 0 && strcmp(content,"tmd")) {
+    debug_printf("Requesting %d version tmd from NUS", version);
+    snprintf(buf, 128, "http://nus.cdn.shop.wii.com/ccs/download/%08x%08x/%s.%d",
+           titleid1, titleid2, content, version);
+  } else {
+    snprintf(buf, 128, "http://nus.cdn.shop.wii.com/ccs/download/%08x%08x/%s",
+  	   titleid1, titleid2, content);
+  }
 
   retval = http_request(buf, 1 << 31);
   if (!retval) {
@@ -304,7 +312,7 @@ s32 install_ticket(const signed_blob *s_tik, const signed_blob *s_certs, u32 cer
   return 0;
 }
 
-s32 install(const signed_blob *s_tmd, const signed_blob *s_certs, u32 certs_len, u8 *iosParts) {
+s32 install(const signed_blob *s_tmd, const signed_blob *s_certs, u32 certs_len) {
   u32 ret, i;
   tmd *p_tmd = SIGNATURE_PAYLOAD(s_tmd);
   debug_printf("Adding title...\n");
@@ -335,10 +343,22 @@ s32 install(const signed_blob *s_tmd, const signed_blob *s_certs, u32 certs_len,
 
 }
 
+#ifdef STANDALONE
+// set cursor to position (x, y)
+void SetCursorPosition(int x, int y) {
+  printf("%c[%i;%if", 27, (signed int)y, (signed int)x);
+}
+
+// clear screen
+void ClearScreen() {
+  SetCursorPosition(0,0);
+  printf("%c[2J", 27);
+}
+
 int main(int argc, char **argv) {
 
 	console_setup();
-	printf("PatchMii Core v" VERSION ", by bushing\n");
+	printf("InstallMii Core v" VERSION ", by bushing (modified by lukegb)\n");
 
 // ******* WARNING *******
 // Obviously, if you're reading this, you're obviously capable of disabling the
@@ -353,6 +373,82 @@ int main(int argc, char **argv) {
 
 	printvers();
   
+	int titleid_h;
+	int titleid_l;
+	int titleversion;
+	titleid_h = INPUT_TITLEID_H;
+	titleid_l = INPUT_TITLEID_L;
+	titleversion = 0;
+	int iostitles[80] = {4,9,10,11,12,13,14,15,16,17,20,21,22,28,30,31,33,34,35,36,37,38,40,41,43,45,46,48,50,51,52,53,55,56,57,58,60,61,70,80};
+	int stubbed[80] = {4,10,11,16,20,30,40,50,51,52,60,70};
+	printf("\n\nInstall IOS version <  4 >\n -- STUB --\n\nPress A to install, or Home to return to the HBC.");
+	int curiospos = 0;
+	int endios = 0, endstub  = 0;
+	while (1) {
+		if (iostitles[endios] != 80) {
+			endios++;
+		}
+		if (stubbed[endstub] != 70) {
+			endstub++;
+		}
+		if ((iostitles[endios] == 80 && stubbed[endstub] == 70) || (endios == 80 && endstub == 80)) {
+			break;
+		}
+	}
+	VIDEO_WaitVSync();
+	bool breakout = false;
+	bool haschangedios = false;
+	u16 ib;
+	while (!breakout) {
+		WPAD_ScanPads();
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
+			SetCursorPosition(0,12);
+			printf("Goodbye!");
+			sleep(3);
+			exit(0);
+		}
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_LEFT) {
+			// We're currently at curiospos
+			if (curiospos > 0) { // Okay, we can go down
+				curiospos--;
+			} else {
+				curiospos = endios;
+			}
+			haschangedios = true;
+		}
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_RIGHT) {
+			if (curiospos < endios) {
+				curiospos++;
+			} else {
+				curiospos = 0;
+			}
+			haschangedios = true;
+		}
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A) {
+			// Hooray!
+			breakout = true;
+			titleid_l = iostitles[curiospos];
+		}
+		if (haschangedios) {
+			SetCursorPosition(22,5);
+			printf("%2d", iostitles[curiospos]);
+			SetCursorPosition(0,6);
+			printf("            "); // Wipe out -- STUB -- message
+			for (ib = 0; ib < endstub; ib++) {
+				if (stubbed[ib] == iostitles[curiospos]) {
+					SetCursorPosition(0,6);
+					printf(" -- STUB -- ");
+					break;
+				}
+			}
+		}
+		VIDEO_WaitVSync(); // Hang around a bit...
+	}
+	ClearScreen();
+	printf("Installing: IOS %d...", iostitles[curiospos]);
+#else
+int runinstallmii(int titleid_h, int titleid_l, int titleversion) {
+#endif
 	int retval;
 
 	if (ISFS_Initialize() || create_temp_dir()) {
@@ -384,8 +480,8 @@ int main(int argc, char **argv) {
   
   	u32 tmdsize;
 
-  	debug_printf("Downloading IOS%d metadata: ..", INPUT_TITLEID_L);
-  	retval = get_nus_object(INPUT_TITLEID_H, INPUT_TITLEID_L, "tmd", &temp_tmdbuf, &tmdsize);
+  	debug_printf("Downloading IOS%d metadata: ..", titleid_l);
+  	retval = get_nus_object(titleid_h, titleid_l, titleversion, "tmd", &temp_tmdbuf, &tmdsize );
   	if (retval<0) {
 		debug_printf("get_nus_object(tmd) returned %d, tmdsize = %u\n", retval, tmdsize);
 		exit(1);
@@ -406,7 +502,7 @@ int main(int argc, char **argv) {
   	debug_printf("\b ..tmd..");
 
 	u32 ticketsize;
-	retval = get_nus_object(INPUT_TITLEID_H, INPUT_TITLEID_L, 
+	retval = get_nus_object(titleid_h, titleid_l, titleversion,
 						  "cetk", &temp_tikbuf, &ticketsize);
 						
 	if (retval < 0) debug_printf("get_nus_object(cetk) returned %d, ticketsize = %u\n", retval, ticketsize);
@@ -437,8 +533,6 @@ int main(int argc, char **argv) {
 	static char cidstr[32];
 	u16 i;
 
-	u32 size=0;
-
 	for (i=0;i<p_tmd->num_contents;i++) {
 	   debug_printf("Downloading part %d/%d (%uK): ", i+1, 
 					p_tmd->num_contents, ((u32)p_tmd->contents[i].size/1024));
@@ -447,7 +541,7 @@ int main(int argc, char **argv) {
 	   u8 *content_buf;
 	   u32 content_size;
 
-	   retval = get_nus_object(INPUT_TITLEID_H, INPUT_TITLEID_L, cidstr, &content_buf, &content_size);
+	   retval = get_nus_object(titleid_h, titleid_l, titleversion, cidstr, &content_buf, &content_size);
 	   if (retval < 0) {
 			debug_printf("get_nus_object(%s) failed with error %d, content size = %u\n", 
 					cidstr, retval, content_size);
@@ -486,7 +580,7 @@ int main(int argc, char **argv) {
 		exit(1);
   	}
 
-  	retval = install(s_tmd, s_certs, haxx_certs_size, iosParts);
+  	retval = install(s_tmd, s_certs, haxx_certs_size);
 		   
   	if (retval) {
     	debug_printf("install returned %d\n", retval);
@@ -494,6 +588,10 @@ int main(int argc, char **argv) {
   	}
 
   	debug_printf("Done!\n");
-
-//	exit(0);
+#ifdef STANDALONE
+	exit(0);
 }
+#else
+	return retval;
+}
+#endif
